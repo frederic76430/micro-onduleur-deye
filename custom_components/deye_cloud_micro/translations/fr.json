@@ -1,0 +1,121 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Deye Cloud",
+        "description": "Créez une application sur **developer.deyecloud.com** pour obtenir l'App ID et l'App Secret, puis saisissez votre compte **Deye Cloud** (celui de l'appli).",
+        "data": {
+          "region": "Centre de données",
+          "app_id": "App ID",
+          "app_secret": "App Secret",
+          "email": "Adresse e-mail Deye Cloud",
+          "password": "Mot de passe Deye Cloud"
+        },
+        "data_description": {
+          "region": "Indiqué dans « DATA CENTER » sur developer.deyecloud.com (EMEA = Europe)."
+        }
+      },
+      "station": {
+        "title": "Choisir votre installation",
+        "description": "Plusieurs installations trouvées, choisissez-en une",
+        "data": {
+          "station_id": "Installation"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reconnexion à Deye Cloud",
+        "description": "Deye Cloud refuse les identifiants enregistrés. Saisissez-les à nouveau.",
+        "data": {
+          "region": "Centre de données",
+          "app_id": "App ID",
+          "app_secret": "App Secret",
+          "email": "Adresse e-mail Deye Cloud",
+          "password": "Mot de passe Deye Cloud"
+        }
+      },
+      "local": {
+        "title": "Connexion locale (facultatif)",
+        "description": "Pour lire le Deye **toutes les 10 secondes** sur votre réseau, comme Solarman : adresse IP du boîtier Wi-Fi du Deye (ex. 192.168.1.50). Laissez vide pour utiliser seulement Deye Cloud.\n\nLe numéro de série du boîtier est trouvé automatiquement (boîtier allumé) ou repris de Deye Cloud ; sinon il est sur l'étiquette du boîtier.",
+        "data": {
+          "host": "Adresse IP du boîtier Wi-Fi",
+          "port": "Port",
+          "logger_serial": "Numéro de série du boîtier (logger)",
+          "sans_test": "Enregistrer sans tester (onduleur éteint la nuit)"
+        },
+        "data_description": {
+          "sans_test": "La nuit le Deye est éteint et ne répond pas : cochez pour enregistrer quand même."
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "App ID, App Secret, e-mail ou mot de passe refusé",
+      "no_stations": "Aucune installation trouvée sur ce compte",
+      "cannot_connect": "Impossible de joindre Deye Cloud",
+      "unknown": "Erreur inattendue, consultez les journaux",
+      "cannot_connect_local": "Le boîtier Wi-Fi ne répond pas (IP, port ou numéro de série ?). La nuit, cochez « Enregistrer sans tester ».",
+      "serial_required": "Numéro de série introuvable automatiquement : saisissez-le (étiquette du boîtier, ou Solarman)"
+    },
+    "abort": {
+      "already_configured": "Cette installation est déjà configurée",
+      "reauth_successful": "Identifiants mis à jour"
+    }
+  },
+  "selector": {
+    "region": {
+      "options": {
+        "eu": "Europe (EMEA, APAC)",
+        "us": "Amériques"
+      }
+    }
+  },
+  "exceptions": {
+    "connection_error": {
+      "message": "Impossible de joindre Deye Cloud"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": {
+        "name": "État de l'onduleur",
+        "state": {
+          "en_ligne": "En ligne",
+          "alerte": "Alerte",
+          "hors_ligne": "Hors ligne"
+        }
+      },
+      "local_state": {
+        "name": "État (local)",
+        "state": {
+          "attente": "En attente",
+          "auto_test": "Auto-test",
+          "normal": "Normal",
+          "alarme": "Alarme",
+          "defaut": "Défaut",
+          "hors_ligne": "Hors ligne",
+          "inconnu": "Inconnu"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Connexion locale (facultatif)",
+        "description": "Pour lire le Deye **toutes les 10 secondes** sur votre réseau, comme Solarman : adresse IP du boîtier Wi-Fi du Deye (ex. 192.168.1.50). Laissez vide pour utiliser seulement Deye Cloud.\n\nLe numéro de série du boîtier est trouvé automatiquement (boîtier allumé) ou repris de Deye Cloud ; sinon il est sur l'étiquette du boîtier.",
+        "data": {
+          "host": "Adresse IP du boîtier Wi-Fi",
+          "port": "Port",
+          "logger_serial": "Numéro de série du boîtier (logger)",
+          "sans_test": "Enregistrer sans tester (onduleur éteint la nuit)"
+        },
+        "data_description": {
+          "sans_test": "La nuit le Deye est éteint et ne répond pas : cochez pour enregistrer quand même."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect_local": "Le boîtier Wi-Fi ne répond pas (IP, port ou numéro de série ?). La nuit, cochez « Enregistrer sans tester ».",
+      "serial_required": "Numéro de série introuvable automatiquement : saisissez-le (étiquette du boîtier, ou Solarman)"
+    }
+  }
+}

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from typing import Any
 
 from homeassistant.components.sensor import RestoreSensor, SensorDeviceClass, SensorEntity, SensorStateClass
@@ -49,6 +51,8 @@ LOCAL_SENSORS = [
     ("grid_current",   "Courant réseau",      "A",  SensorDeviceClass.CURRENT,     1, True),
     ("grid_frequency", "Fréquence réseau",    "Hz", SensorDeviceClass.FREQUENCY,   2, True),
     ("temperature",    "Température",         "°C", SensorDeviceClass.TEMPERATURE, 1, True),
+    ("pv_power",       "Puissance PV (panneaux)", "W", SensorDeviceClass.POWER,    0, True),
+    ("power_losses",   "Pertes de l'onduleur", "W",  SensorDeviceClass.POWER,       0, True),
 ]
 
 # Unité Deye → (unité HA, device_class, state_class)
@@ -124,6 +128,19 @@ def _amorcer(local, cle: str, valeur: float) -> None:
         local.jour = aujourdhui
     if local.jour == aujourdhui and valeur > local.max_jour.get(cle, 0.0):
         local.max_jour[cle] = valeur
+
+
+def nom_francais(cle: str) -> str:
+    """Nom lisible pour les mesures Deye Cloud courantes.
+
+    « TotalProduction1 » → « Production totale PV1 » : rangé juste sous « Production totale »
+    dans la page de l'appareil (tri alphabétique).
+    """
+    if m := re.fullmatch(r"TotalProduction\s*(\d)", cle.strip(), re.IGNORECASE):
+        return f"Production totale PV{m.group(1)}"
+    if m := re.fullmatch(r"(?:Daily|Today)Production\s*(\d)", cle.strip(), re.IGNORECASE):
+        return f"Production aujourd'hui PV{m.group(1)} (cloud)"
+    return cle
 
 
 class DeyeCloudEntity(CoordinatorEntity[DeyeCloudCoordinator]):
@@ -236,7 +253,8 @@ class MesureAppareilSensor(DeyeCloudEntity, SensorEntity):
         super().__init__(coordinator, entry)
         self._sn, self._cle = sn, cle
         self._attr_unique_id = f"{coordinator.station_id}_{sn}_{slugify(cle)}"
-        self._attr_name = f"{cle} ({sn[-4:]})" if plusieurs else cle
+        nom = nom_francais(cle)
+        self._attr_name = f"{nom} ({sn[-4:]})" if plusieurs else nom
         ha_unite, classe, etat = UNITES.get(unite or "", (unite, None, SensorStateClass.MEASUREMENT))
         self._attr_native_unit_of_measurement = ha_unite
         self._attr_device_class = classe
@@ -360,7 +378,7 @@ class ProductionPVSensor(_LocalEntity, RestoreSensor):
         super().__init__(coordinator, entry)
         self._cle = f"e_today_{n}"
         self._attr_unique_id = f"{coordinator.station_id}_local_e_today_{n}"
-        self._attr_name = f"PV{n} production aujourd'hui"
+        self._attr_name = f"Production aujourd'hui PV{n}"
         self._attr_entity_registry_enabled_default = n <= 2
 
     async def async_added_to_hass(self) -> None:

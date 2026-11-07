@@ -283,6 +283,8 @@ async def test_local_et_cloud_reunis(hass, freezer, aioclient_mock, boitier):
     assert float(_etat(hass, "local_temperature").state) == 28.0
     assert float(_etat(hass, "local_grid_frequency").state) == 50.01
     assert _etat(hass, "local_state").state == "normal"
+    assert float(_etat(hass, "local_pv_power").state) == 74.8 + 70.0
+    assert float(_etat(hass, "local_power_losses").state) == 0  # 144,8 W DC < 150 W AC dans l'exemple
     # La mesure cloud en double est désactivée par défaut
     reg = er.async_get(hass)
     assert reg.async_get_entity_id("sensor", DOMAIN, f"{STATION}_{SN}_pv1_voltage") is None or \
@@ -473,3 +475,12 @@ async def test_redemarrage_le_soir(hass, freezer, aioclient_mock, boitier):
     await hass.async_block_till_done()
     await _tick(hass, freezer, timedelta(minutes=3))
     assert float(hass.states.get(pv1).state) == 0
+
+
+
+def test_noms_francais():
+    from custom_components.deye_cloud_micro.sensor import nom_francais
+
+    assert nom_francais("TotalProduction1") == "Production totale PV1"
+    assert nom_francais("TotalProduction2") == "Production totale PV2"
+    assert nom_francais("PV1 Voltage") == "PV1 Voltage"

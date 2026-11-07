@@ -95,6 +95,9 @@ def decoder(r: dict[int, int]) -> dict[str, Any]:
         a = round(u(0x6E + 2 * (n - 1)) * 0.1, 1)
         d[f"pv{n}_voltage"], d[f"pv{n}_current"], d[f"pv{n}_power"] = v, a, round(v * a, 1)
         d[f"e_today_{n}"] = round(u(0x40 + n) * 0.1, 1)
+    # Puissance des panneaux (DC) et pertes de conversion (DC → AC), comme Solarman
+    d["pv_power"] = round(sum(d[f"pv{n}_power"] for n in range(1, 5)), 1)
+    d["power_losses"] = round(max(0.0, d["pv_power"] - d["power"]), 1) if d["pv_power"] else 0.0
     return d
 
 

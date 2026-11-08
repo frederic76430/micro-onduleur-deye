@@ -65,7 +65,7 @@ class LimitePuissance(_LocalEntity, NumberEntity):
                 f"(réessayez dans {reste} min)"
             )
         try:
-            await self.coordinator.local.async_ecrire(REG_LIMITE, round(value * 10))
+            await self.coordinator.local.async_ecrire(REG_LIMITE, round(value))
         except DeyeLocalError as err:
             raise HomeAssistantError(f"Le Deye ne répond pas : {err}") from err
         self._dernier_changement = maintenant

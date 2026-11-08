@@ -217,8 +217,8 @@ async def test_mesures_appareil_ajoutees_plus_tard(hass, freezer, aioclient_mock
 # ------------------------------------------------------------------ lecture locale
 def _registres(jour=4, total=5763, puissance=1500, etat=2):
     r = {a: 0 for a in range(0x3B, 0x75)}
-    r.update({0x28: 1000, 0x29: 0, 0x2A: 0, 0x2B: 1})
-    r.update({0x3B: etat, 0x3C: jour, 0x3F: total, 0x49: 2312, 0x4C: 6, 0x4F: 5001,
+    r.update({0x28: 100, 0x29: 0, 0x2A: 0, 0x2B: 1})
+    r.update({0x3B: etat, 0x3C: jour, 0x3F: total, 0x45: 2503, 0x47: 3109, 0x49: 2312, 0x4C: 6, 0x4F: 5001,
               0x56: puissance, 0x5A: 3800, 0x6D: 325, 0x6E: 23, 0x6F: 318, 0x70: 22})
     return r
 
@@ -284,6 +284,10 @@ async def test_local_et_cloud_reunis(hass, freezer, aioclient_mock, boitier):
     assert float(_etat(hass, "local_grid_frequency").state) == 50.01
     assert _etat(hass, "local_state").state == "normal"
     assert float(_etat(hass, "local_pv_power").state) == 74.8 + 70.0
+    assert float(_etat(hass, "local_e_total_1").state) == 250.3
+    assert float(_etat(hass, "local_e_total_2").state) == 310.9
+    # Micro à 2 entrées : pas de PV3 / PV4
+    assert er.async_get(hass).async_get_entity_id("sensor", DOMAIN, f"{STATION}_local_pv3_voltage") is None
     assert float(_etat(hass, "local_power_losses").state) == 0  # 144,8 W DC < 150 W AC dans l'exemple
     # La mesure cloud en double est désactivée par défaut
     reg = er.async_get(hass)
@@ -397,12 +401,12 @@ async def test_marche_arret_et_limitation(hass, freezer, aioclient_mock, boitier
 
     await hass.services.async_call("number", "set_value", {"entity_id": limite, "value": 50}, blocking=True)
     await hass.async_block_till_done()
-    assert boitier.ecrits[-1] == (0x28, 500)
+    assert boitier.ecrits[-1] == (0x28, 50)
     assert float(hass.states.get(limite).state) == 50
     # Deuxième changement trop rapproché : refusé (usure de l'EEPROM)
     with pytest.raises(HomeAssistantError):
         await hass.services.async_call("number", "set_value", {"entity_id": limite, "value": 60}, blocking=True)
-    assert boitier.ecrits[-1] == (0x28, 500)
+    assert boitier.ecrits[-1] == (0x28, 50)
 
     # La nuit (boîtier muet) : commandes indisponibles
     from custom_components.deye_cloud_micro.local import DeyeLocalError

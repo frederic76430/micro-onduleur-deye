@@ -87,7 +87,8 @@ def decoder(r: dict[int, int]) -> dict[str, Any]:
     }
     # Réglages (lus seulement si le bloc 0x28-0x2B a été lu)
     if REG_LIMITE in r:
-        d["power_limit"] = round(u(REG_LIMITE) * 0.1, 1)
+        # Valeur en % directement (100 = 100 %), comme Solarman : la production à 184 W sur 800 W le confirme
+        d["power_limit"] = float(u(REG_LIMITE))
     if REG_MARCHE in r:
         d["inverter_on"] = {MARCHE: True, ARRET: False}.get(u(REG_MARCHE))
     for n in range(1, 5):
@@ -95,6 +96,8 @@ def decoder(r: dict[int, int]) -> dict[str, Any]:
         a = round(u(0x6E + 2 * (n - 1)) * 0.1, 1)
         d[f"pv{n}_voltage"], d[f"pv{n}_current"], d[f"pv{n}_power"] = v, a, round(v * a, 1)
         d[f"e_today_{n}"] = round(u(0x40 + n) * 0.1, 1)
+        # Compteur total par entrée PV (registres du profil Solarman « Total Production 1…4 »)
+        d[f"e_total_{n}"] = round(u({1: 0x45, 2: 0x47, 3: 0x4A, 4: 0x4D}[n]) * 0.1, 1)
     # Puissance des panneaux (DC) et pertes de conversion (DC → AC), comme Solarman
     d["pv_power"] = round(sum(d[f"pv{n}_power"] for n in range(1, 5)), 1)
     d["power_losses"] = round(max(0.0, d["pv_power"] - d["power"]), 1) if d["pv_power"] else 0.0
@@ -221,6 +224,12 @@ class DeyeLocalCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Puissance aberrante (trame corrompue) : valeur précédente
         if mesures["power"] > 3000:
             mesures["power"] = (self.data or {}).get("power", 0.0)
+
+        # Compteurs totaux : jamais de baisse, jamais de 0 (valeur invalide ou trame incomplète)
+        for cle in ("e_total", "e_total_1", "e_total_2", "e_total_3", "e_total_4"):
+            avant = (self.data or {}).get(cle) or 0.0
+            if mesures.get(cle, 0.0) < avant:
+                mesures[cle] = avant
 
         for cle in ("e_today", "e_today_1", "e_today_2", "e_today_3", "e_today_4"):
             v, memoire = mesures.get(cle, 0.0), self.max_jour.get(cle, 0.0)

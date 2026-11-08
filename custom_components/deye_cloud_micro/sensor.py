@@ -81,8 +81,13 @@ async def async_setup_entry(
     entites.append(PuissanceInstalleeSensor(coordinator, entry))
 
     if coordinator.local is not None:
-        entites += [MesureLocaleSensor(coordinator, entry, *d) for d in LOCAL_SENSORS]
-        entites += [ProductionPVSensor(coordinator, entry, n) for n in range(1, 5)]
+        # Micro-onduleur à 2 entrées : PV3 / PV4 seulement si une tension y a déjà été mesurée
+        donnees = coordinator.local.data or {}
+        nb_pv = 4 if (donnees.get("pv3_voltage") or 0) > 0 or (donnees.get("pv4_voltage") or 0) > 0 else 2
+        garder = lambda cle: not any(cle.startswith(f"pv{n}_") for n in range(nb_pv + 1, 5))
+        entites += [MesureLocaleSensor(coordinator, entry, *d) for d in LOCAL_SENSORS if garder(d[0])]
+        entites += [ProductionPVSensor(coordinator, entry, n) for n in range(1, nb_pv + 1)]
+        entites += [ProductionTotalePVSensor(coordinator, entry, n) for n in range(1, nb_pv + 1)]
         entites.append(EtatLocalSensor(coordinator, entry))
 
     async_add_entities(entites)
@@ -92,6 +97,9 @@ async def async_setup_entry(
 
     @callback
     def _ajouter_mesures() -> None:
+        # Avec la connexion locale, les mesures détaillées viennent du boîtier : pas de doublons cloud
+        if coordinator.local is not None:
+            return
         appareils: dict[str, Any] = (coordinator.data or {}).get("devices") or {}
         plusieurs = len(appareils) > 1
         nouvelles = []
@@ -325,6 +333,9 @@ class MesureLocaleSensor(_LocalEntity, SensorEntity):
         self._attr_device_class = classe
         self._attr_suggested_display_precision = precision
         self._attr_entity_registry_enabled_default = actif
+        # Mesures techniques rangées dans « Diagnostic » : la partie « Capteurs » ne garde que l'essentiel
+        if cle not in ("pv1_power", "pv2_power", "pv3_power", "pv4_power", "pv_power"):
+            self._attr_entity_category = EntityCategory.DIAGNOSTIC
 
     @property
     def available(self) -> bool:
@@ -346,6 +357,7 @@ class EtatLocalSensor(_LocalEntity, SensorEntity):
     _attr_options = ["attente", "auto_test", "normal", "alarme", "defaut", "hors_ligne", "inconnu"]
     _attr_translation_key = "local_state"
     _attr_icon = "mdi:state-machine"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, coordinator, entry) -> None:
         super().__init__(coordinator, entry)
@@ -390,3 +402,32 @@ class ProductionPVSensor(_LocalEntity, RestoreSensor):
     def native_value(self) -> float | None:
         v = self.coordinator.local.production_jour(self._cle)
         return 0.0 if v is None else v
+
+
+class ProductionTotalePVSensor(_LocalEntity, RestoreSensor):
+    """Compteur total d'une entrée PV (comme « Total Production 1 / 2 » de Solarman)."""
+
+    _attr_device_class = SensorDeviceClass.ENERGY
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
+    _attr_suggested_display_precision = 1
+    _attr_icon = "mdi:counter"
+
+    def __init__(self, coordinator, entry, n: int) -> None:
+        super().__init__(coordinator, entry)
+        self._cle = f"e_total_{n}"
+        self._attr_unique_id = f"{coordinator.station_id}_local_e_total_{n}"
+        self._attr_name = f"Production totale PV{n}"
+        self._restaure: float | None = None
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        if (donnees := await self.async_get_last_sensor_data()) is not None:
+            self._restaure = nombre(donnees.native_value)
+
+    @property
+    def native_value(self) -> float | None:
+        v = nombre((self.coordinator.local.data or {}).get(self._cle))
+        if v and v > 0:
+            return max(v, self._restaure or 0)
+        return self._restaure
